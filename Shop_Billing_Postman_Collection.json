@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "Shop Billing System API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "shop-billing-v1"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8080"},
+    {"key": "token",    "value": ""}
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [{"listen":"test","script":{"exec":["var r=pm.response.json(); if(r.data&&r.data.token){pm.collectionVariables.set('token',r.data.token);}"]}}],
+          "request": {
+            "method": "POST", "url": "{{base_url}}/api/auth/login",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\"username\":\"admin\",\"password\":\"admin123\"}"}
+          }
+        },
+        {
+          "name": "Login (User)",
+          "request": {
+            "method": "POST", "url": "{{base_url}}/api/auth/login",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\"username\":\"user\",\"password\":\"user123\"}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {"name":"Get All Users","request":{"method":"GET","url":"{{base_url}}/api/admin/users","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Create Manager","request":{"method":"POST","url":"{{base_url}}/api/admin/users","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"username\":\"manager1\",\"password\":\"manager123\",\"role\":\"ROLE_MANAGER\",\"fullName\":\"Shop Manager\"}"}}},
+        {"name":"Disable User","request":{"method":"PATCH","url":"{{base_url}}/api/admin/users/2/disable","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Enable User","request":{"method":"PATCH","url":"{{base_url}}/api/admin/users/2/enable","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Reset Password","request":{"method":"PATCH","url":"{{base_url}}/api/admin/users/2/reset-password","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"newPassword\":\"newpass123\"}"}}}
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {"name":"Create Product","request":{"method":"POST","url":"{{base_url}}/api/products","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"designName\":\"Dragon Warrior\",\"description\":\"Premium anime tee\",\"category\":\"Anime\",\"printType\":\"Screen Print\"}"}}},
+        {"name":"Get All Products","request":{"method":"GET","url":"{{base_url}}/api/products","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Create Variant","request":{"method":"POST","url":"{{base_url}}/api/products/variants","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"productId\":1,\"productCode\":\"DW-WHT-M\",\"color\":\"White\",\"size\":\"M\",\"sellingPrice\":899,\"costPrice\":400,\"stock\":30,\"minimumStock\":5}"}}},
+        {"name":"Get Variant by Barcode","request":{"method":"GET","url":"{{base_url}}/api/products/variants/barcode/100001","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Low Stock Variants","request":{"method":"GET","url":"{{base_url}}/api/products/variants/low-stock","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Barcodes",
+      "item": [
+        {"name":"Generate Barcode","request":{"method":"POST","url":"{{base_url}}/api/barcodes/generate/1","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Regenerate Barcode","request":{"method":"POST","url":"{{base_url}}/api/barcodes/regenerate/1","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Download PNG","request":{"method":"GET","url":"{{base_url}}/api/barcodes/download/png/1","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Download PDF Sticker","request":{"method":"GET","url":"{{base_url}}/api/barcodes/download/pdf/1","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Search by Barcode","request":{"method":"GET","url":"{{base_url}}/api/barcodes/search/100001","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {"name":"Create Customer","request":{"method":"POST","url":"{{base_url}}/api/customers","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"name\":\"Ravi Kumar\",\"mobileNumber\":\"9876543210\",\"address\":\"Chennai\"}"}}},
+        {"name":"Search Customers","request":{"method":"GET","url":{"raw":"{{base_url}}/api/customers/search?q=Ravi","query":[{"key":"q","value":"Ravi"}]},"header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Get Customer Purchases","request":{"method":"GET","url":"{{base_url}}/api/customers/1/purchases","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {"name":"Create Invoice — Barcode Mode","request":{"method":"POST","url":"{{base_url}}/api/invoices","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"customerName\":\"Walk-in Customer\",\"items\":[{\"barcode\":\"100001\",\"designName\":\"Hanuman Warrior\",\"quantity\":2,\"unitPrice\":799,\"discountAmount\":0}]}"}}},
+        {"name":"Create Invoice — Manual Mode","request":{"method":"POST","url":"{{base_url}}/api/invoices","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"customerName\":\"Priya Sharma\",\"customerMobile\":\"9123456789\",\"items\":[{\"designName\":\"Street King\",\"color\":\"Black\",\"size\":\"L\",\"printType\":\"DTF\",\"unitPrice\":699,\"quantity\":1,\"discountAmount\":50}]}"}}},
+        {"name":"Get All Invoices","request":{"method":"GET","url":"{{base_url}}/api/invoices","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Get My Invoices","request":{"method":"GET","url":"{{base_url}}/api/invoices/my","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Download Invoice PDF","request":{"method":"GET","url":"{{base_url}}/api/invoices/1/pdf","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {"name":"Add Stock","request":{"method":"POST","url":"{{base_url}}/api/inventory/adjust","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"productVariantId\":1,\"changeType\":\"ADD_STOCK\",\"quantity\":20,\"reason\":\"Restock from supplier\"}"}}},
+        {"name":"Stock History","request":{"method":"GET","url":"{{base_url}}/api/inventory/movements/1","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Low Stock Alert","request":{"method":"GET","url":"{{base_url}}/api/inventory/low-stock","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {"name":"Get Dashboard","request":{"method":"GET","url":"{{base_url}}/api/dashboard","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {"name":"Daily Report","request":{"method":"GET","url":"{{base_url}}/api/reports/daily","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Monthly Report","request":{"method":"GET","url":"{{base_url}}/api/reports/monthly","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Yearly Report","request":{"method":"GET","url":"{{base_url}}/api/reports/yearly","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Custom Report","request":{"method":"POST","url":"{{base_url}}/api/reports/custom","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"startDate\":\"2026-01-01\",\"endDate\":\"2026-06-30\"}"}}},
+        {"name":"Report History","request":{"method":"GET","url":"{{base_url}}/api/reports/history","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Profit (Admin)",
+      "item": [
+        {"name":"Save Monthly Profit","request":{"method":"POST","url":"{{base_url}}/api/profit","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"month\":6,\"year\":2026,\"totalSales\":70000,\"productionCost\":50000,\"otherExpenses\":2000,\"notes\":\"June 2026\"}"}}},
+        {"name":"Get Profit by Year","request":{"method":"GET","url":"{{base_url}}/api/profit/year/2026","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    },
+    {
+      "name": "Settings & Admin",
+      "item": [
+        {"name":"Get Settings","request":{"method":"GET","url":"{{base_url}}/api/settings","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Update Settings","request":{"method":"PUT","url":"{{base_url}}/api/settings","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"shopName\":\"My Fashion Store\",\"shopAddress\":\"123 Market Street, Chennai\",\"mobileNumber\":\"+91 98765 43210\",\"email\":\"shop@fashion.com\",\"gstNumber\":\"33AAAAA0000A1Z5\",\"footerMessage\":\"Thank you for shopping!\"}"}}},
+        {"name":"Get Audit Logs","request":{"method":"GET","url":"{{base_url}}/api/audit-logs","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}},
+        {"name":"Create Backup","request":{"method":"POST","url":"{{base_url}}/api/backup/create","header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+      ]
+    }
+  ]
+}
