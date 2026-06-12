@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,4 +36,9 @@ public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> 
            "WHERE i.invoiceDate BETWEEN :start AND :end " +
            "GROUP BY ii.printType ORDER BY totalQty DESC")
     List<Object[]> findTopSellingPrintTypes(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(ii.quantity * ii.productVariant.costPrice), 0) " +
+            "FROM InvoiceItem ii JOIN ii.invoice i " +
+            "WHERE i.invoiceDate BETWEEN :start AND :end AND ii.productVariant IS NOT NULL")
+    BigDecimal sumProductionCostByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

@@ -50,7 +50,7 @@ public class InvoiceController {
     @GetMapping("/my")
     @Operation(summary = "Get invoices created by the current user")
     public ResponseEntity<ApiResponse<List<InvoiceResponse>>> getMyInvoices() {
-        return ResponseEntity.ok(ApiResponse.success(invoiceService.getMyInvoices()));
+        return ResponseEntity.ok(ApiResponse.success(invoiceService.getAllInvoices()));
     }
 
     @GetMapping("/{id}/pdf")

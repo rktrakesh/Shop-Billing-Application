@@ -82,6 +82,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .yearlySales(yearlySales)
                 .lowStockCount(variantRepository.countLowStockVariants())
                 .monthlyInvoiceCount(invoiceRepository.countByDateRange(monthStart, now))
+                .lowStockProducts(variantMapper.toResponseList(variantRepository.findLowStockVariants()))
                 .recentInvoices(invoiceMapper.toResponseList(
                         invoiceRepository.findRecentInvoices(PageRequest.of(0, 10))))
                 .build();
