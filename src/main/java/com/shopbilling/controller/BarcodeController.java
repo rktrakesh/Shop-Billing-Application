@@ -56,6 +56,7 @@ public class BarcodeController {
     }
 
     @GetMapping("/search/{barcode}")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','USER')")
     @Operation(summary = "Search product variant by barcode")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> searchByBarcode(@PathVariable String barcode) {
         return ResponseEntity.ok(ApiResponse.success(barcodeService.searchByBarcode(barcode)));
