@@ -113,7 +113,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductVariantResponse updateVariant(Long id, ProductVariantRequest request) {
         ProductVariant variant = getVariantEntityById(id);
-        
+
         if (!variant.getProductCode().equals(request.getProductCode()) &&
                 variantRepository.existsByProductCode(request.getProductCode())) {
             throw new DuplicateResourceException("Product code already exists: " + request.getProductCode());
@@ -124,6 +124,7 @@ public class ProductServiceImpl implements ProductService {
         variant.setSize(request.getSize());
         variant.setSellingPrice(request.getSellingPrice());
         variant.setCostPrice(request.getCostPrice());
+        if (request.getStock() != null) variant.setStock(request.getStock());
         if (request.getMinimumStock() != null) variant.setMinimumStock(request.getMinimumStock());
         if (request.getImageUrl() != null) variant.setImageUrl(request.getImageUrl());
 
