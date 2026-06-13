@@ -5,10 +5,7 @@ import com.shopbilling.dto.response.MonthlyProfitResponse;
 import com.shopbilling.dto.response.ProfitSummaryResponse;
 import com.shopbilling.entity.MonthlyProfit;
 import com.shopbilling.mapper.MonthlyProfitMapper;
-import com.shopbilling.repository.InvoiceItemRepository;
-import com.shopbilling.repository.InvoiceRepository;
-import com.shopbilling.repository.MonthlyProfitRepository;
-import com.shopbilling.repository.ShopSettingsRepository;
+import com.shopbilling.repository.*;
 import com.shopbilling.service.MonthlyProfitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +40,7 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final ShopSettingsRepository shopSettingsRepository;
+    private final ItemReturnRepository itemReturnRepository;
 
     @Override
     public MonthlyProfitResponse createOrUpdateProfit(MonthlyProfitRequest request) {
@@ -205,24 +203,52 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
         table.addCell(c2);
     }
 
+//    private ProfitSummaryResponse buildSummary(LocalDate start, LocalDate end, String label) {
+//        LocalDateTime s = start.atStartOfDay();
+//        LocalDateTime e = end.atTime(23, 59, 59);
+//
+//        BigDecimal totalSales = invoiceRepository.sumGrandTotalByDateRange(s, e);
+//        BigDecimal productionCost = invoiceItemRepository.sumProductionCostByDateRange(s, e);
+//        long invoiceCount = invoiceRepository.countByDateRange(s, e);
+//
+//        BigDecimal netProfit = totalSales.subtract(productionCost);
+//        BigDecimal margin = totalSales.compareTo(BigDecimal.ZERO) > 0
+//                ? netProfit.divide(totalSales, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+//                : BigDecimal.ZERO;
+//
+//        return ProfitSummaryResponse.builder()
+//                .periodLabel(label)
+//                .startDate(start)
+//                .endDate(end)
+//                .totalSales(totalSales)
+//                .productionCost(productionCost)
+//                .netProfit(netProfit)
+//                .marginPercent(margin)
+//                .invoiceCount(invoiceCount)
+//                .build();
+//    }
+
     private ProfitSummaryResponse buildSummary(LocalDate start, LocalDate end, String label) {
         LocalDateTime s = start.atStartOfDay();
         LocalDateTime e = end.atTime(23, 59, 59);
 
         BigDecimal totalSales = invoiceRepository.sumGrandTotalByDateRange(s, e);
+        BigDecimal totalReturns = itemReturnRepository.sumRefundsByDateRange(s, e);
+        BigDecimal netSales = totalSales.subtract(totalReturns);
+
         BigDecimal productionCost = invoiceItemRepository.sumProductionCostByDateRange(s, e);
         long invoiceCount = invoiceRepository.countByDateRange(s, e);
 
-        BigDecimal netProfit = totalSales.subtract(productionCost);
-        BigDecimal margin = totalSales.compareTo(BigDecimal.ZERO) > 0
-                ? netProfit.divide(totalSales, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+        BigDecimal netProfit = netSales.subtract(productionCost);
+        BigDecimal margin = netSales.compareTo(BigDecimal.ZERO) > 0
+                ? netProfit.divide(netSales, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
         return ProfitSummaryResponse.builder()
                 .periodLabel(label)
                 .startDate(start)
                 .endDate(end)
-                .totalSales(totalSales)
+                .totalSales(netSales)          // now net of returns
                 .productionCost(productionCost)
                 .netProfit(netProfit)
                 .marginPercent(margin)
