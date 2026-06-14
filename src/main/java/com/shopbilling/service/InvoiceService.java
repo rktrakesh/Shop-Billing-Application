@@ -11,4 +11,5 @@ public interface InvoiceService {
     List<InvoiceResponse> getAllInvoices();
     List<InvoiceResponse> getMyInvoices();
     byte[] generateInvoicePdf(Long invoiceId);
+    List<InvoiceResponse> getInvoicesByMobile(String mobile);
 }
