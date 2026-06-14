@@ -64,4 +64,12 @@ public class InvoiceController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+    @GetMapping("/by-mobile")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @Operation(summary = "Get invoices by customer mobile number (Admin/Manager only)")
+    public ResponseEntity<ApiResponse<List<InvoiceResponse>>> getByMobile(
+            @RequestParam String mobile) {
+        return ResponseEntity.ok(ApiResponse.success(invoiceService.getInvoicesByMobile(mobile)));
+    }
 }

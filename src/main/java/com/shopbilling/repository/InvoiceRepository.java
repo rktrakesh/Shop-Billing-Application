@@ -36,4 +36,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     
     @Query("SELECT i.invoiceNumber FROM Invoice i ORDER BY i.id DESC")
     List<String> findLastInvoiceNumber(org.springframework.data.domain.Pageable pageable);
+
+    List<Invoice> findAllByCustomerMobileOrderByInvoiceDateDesc(String customerMobile);
+
 }

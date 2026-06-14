@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -331,5 +332,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (Exception e) {
             throw new BusinessException("Failed to generate PDF: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InvoiceResponse> getInvoicesByMobile(String mobile) {
+        return invoiceRepository.findAllByCustomerMobileOrderByInvoiceDateDesc(mobile)
+                .stream().map(invoiceMapper::toResponse).collect(Collectors.toList());
     }
 }
