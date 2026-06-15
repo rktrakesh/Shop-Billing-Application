@@ -30,7 +30,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +61,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                 customerName = customer.getName();
                 customerMobile = customer.getMobileNumber();
             }
+        }
+
+        // Normalize mobile number so walk-in lookups (GET /api/invoices/by-mobile)
+        // match consistently regardless of spacing/country-code formatting.
+        if (customerMobile != null && !customerMobile.isBlank()) {
+            customerMobile = normalizeMobile(customerMobile);
         }
 
         // Build invoice items
@@ -179,7 +184,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private String generateInvoiceNumber() {
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         List<String> lastNumbers = invoiceRepository.findLastInvoiceNumber(PageRequest.of(0, 1));
-        
+
         int sequence = 1;
         if (!lastNumbers.isEmpty()) {
             String lastNumber = lastNumbers.get(0);
@@ -214,6 +219,32 @@ public class InvoiceServiceImpl implements InvoiceService {
     public List<InvoiceResponse> getMyInvoices() {
         User currentUser = securityUtils.getCurrentUser();
         return invoiceMapper.toResponseList(invoiceRepository.findByCreatedByOrderByCreatedAtDesc(currentUser));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InvoiceResponse> getInvoicesByMobile(String mobile) {
+        String normalized = normalizeMobile(mobile);
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+        // customer_mobile is normalized at write time (see createInvoice), so a
+        // direct equality match is sufficient and indexed for performance.
+        return invoiceMapper.toResponseList(invoiceRepository.findAllByCustomerMobileOrderByInvoiceDateDesc(normalized));
+    }
+
+    /**
+     * Strips spaces, dashes, and a leading "+91"/"91" country code so that
+     * "9876543210", "+91 98765 43210", and "91-9876543210" are all stored
+     * and matched as the same 10-digit number.
+     */
+    private String normalizeMobile(String mobile) {
+        if (mobile == null) return "";
+        String digits = mobile.replaceAll("[^0-9]", "");
+        if (digits.length() > 10 && digits.startsWith("91")) {
+            digits = digits.substring(digits.length() - 10);
+        }
+        return digits;
     }
 
     @Override
@@ -332,12 +363,5 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (Exception e) {
             throw new BusinessException("Failed to generate PDF: " + e.getMessage());
         }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<InvoiceResponse> getInvoicesByMobile(String mobile) {
-        return invoiceRepository.findAllByCustomerMobileOrderByInvoiceDateDesc(mobile)
-                .stream().map(invoiceMapper::toResponse).collect(Collectors.toList());
     }
 }

@@ -1,24 +1,30 @@
 package com.shopbilling.dto.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+
 import java.math.BigDecimal;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ItemReturnRequest {
 
-    @NotNull
+    @NotNull(message = "Invoice ID is required")
     private Long invoiceId;
 
-    @NotNull
+    @NotNull(message = "Invoice item ID is required")
     private Long invoiceItemId;
 
-    @NotNull
-    @Min(1)
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 
-    @NotNull
-    @DecimalMin("0.00")
+    @NotNull(message = "Refund amount is required")
+    @DecimalMin(value = "0.00", message = "Refund amount cannot be negative")
     private BigDecimal refundAmount;
 
     private String reason;

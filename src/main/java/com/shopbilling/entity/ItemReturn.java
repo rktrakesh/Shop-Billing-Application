@@ -2,12 +2,18 @@ package com.shopbilling.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "item_returns")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
 public class ItemReturn {
 
     @Id
@@ -26,17 +32,17 @@ public class ItemReturn {
     @JoinColumn(name = "product_variant_id")
     private ProductVariant productVariant;
 
-    @Column(nullable = false)
+    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "refund_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal refundAmount;
 
-    @Column(length = 255)
+    @Column(name = "reason", length = 255)
     private String reason;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "returned_by")
+    @JoinColumn(name = "returned_by", nullable = false)
     private User returnedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
