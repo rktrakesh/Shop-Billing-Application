@@ -20,6 +20,7 @@ public interface ProductService {
     ProductVariantResponse getVariantById(Long id);
     ProductVariantResponse getVariantByBarcode(String barcode);
     List<ProductVariantResponse> getVariantsByProduct(Long productId);
+    List<ProductVariantResponse> getAllVariants();
     List<ProductVariantResponse> getLowStockVariants();
     void deleteVariant(Long id);
     List<ProductVariantResponse> searchVariants(String query);

@@ -106,6 +106,12 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(productService.getVariantsByProduct(productId)));
     }
 
+    @GetMapping("/variants")
+    @Operation(summary = "Get all variants (active and inactive) across all products (avoids N+1 per-product calls)")
+    public ResponseEntity<ApiResponse<List<ProductVariantResponse>>> getAllVariants() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getAllVariants()));
+    }
+
     @GetMapping("/variants/low-stock")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Get low-stock variants")

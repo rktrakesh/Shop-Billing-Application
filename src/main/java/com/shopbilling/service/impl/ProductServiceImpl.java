@@ -163,6 +163,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<ProductVariantResponse> getAllVariants() {
+        return variantMapper.toResponseList(variantRepository.findAllByOrderByProductIdAsc());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ProductVariantResponse> getLowStockVariants() {
         return variantMapper.toResponseList(variantRepository.findLowStockVariants());
     }

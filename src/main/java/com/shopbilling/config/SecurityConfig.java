@@ -47,23 +47,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PUBLIC_URLS).permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers(HttpMethod.POST, "/api/reports/**").hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers("/api/profit/**").hasRole("ADMIN")
-                .requestMatchers("/api/backup/**").hasRole("ADMIN")
-                .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
-                .requestMatchers("/api/settings/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/reports/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/api/profit/**").hasRole("ADMIN")
+                        .requestMatchers("/api/backup/**").hasRole("ADMIN")
+                        .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
+                        // Shop branding (name/address/logo/footer) is read by all roles for
+                        // receipts and labels; only Admin can change settings.
+                        .requestMatchers(HttpMethod.GET, "/api/settings/**").hasAnyRole("ADMIN", "MANAGER", "USER")
+                        .requestMatchers("/api/settings/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
