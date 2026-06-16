@@ -17,6 +17,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCreatedByOrderByCreatedAtDesc(User user);
     List<Invoice> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
+    @Query("SELECT COUNT(i) FROM Invoice i WHERE i.createdBy = :user AND i.invoiceDate BETWEEN :start AND :end")
+    long countByCreatedByAndDateRange(@Param("user") User user, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     // Used to find a walk-in customer's purchase history when no Customer
     // record exists, by matching the mobile number stored directly on the invoice.
     List<Invoice> findAllByCustomerMobileOrderByInvoiceDateDesc(String customerMobile);

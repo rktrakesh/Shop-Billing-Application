@@ -55,7 +55,7 @@ public class ProfitController {
     }
 
     @GetMapping("/summary/daily")
-    @Operation(summary = "Get profit for a specific date")
+    @Operation(summary = "Get auto-calculated profit summary for a day (defaults to today)")
     public ResponseEntity<ApiResponse<ProfitSummaryResponse>> dailySummary(
             @RequestParam(required = false) String date) {
         LocalDate d = date != null ? LocalDate.parse(date) : LocalDate.now();
@@ -63,17 +63,25 @@ public class ProfitController {
     }
 
     @GetMapping("/summary/monthly")
-    @Operation(summary = "Get monthly profit for a specific year and month")
+    @Operation(summary = "Get auto-calculated profit summary for a month")
     public ResponseEntity<ApiResponse<ProfitSummaryResponse>> monthlySummary(
             @RequestParam int year, @RequestParam int month) {
         return ResponseEntity.ok(ApiResponse.success(profitService.getMonthlyProfit(year, month)));
     }
 
     @GetMapping("/summary/yearly")
-    @Operation(summary = "Get yearly profit for a specific year")
+    @Operation(summary = "Get auto-calculated profit summary for a year")
     public ResponseEntity<ApiResponse<ProfitSummaryResponse>> yearlySummary(
             @RequestParam int year) {
         return ResponseEntity.ok(ApiResponse.success(profitService.getYearlyProfit(year)));
+    }
+
+    @GetMapping("/summary/last-months")
+    @Operation(summary = "Get the last N months of profit summaries (oldest first) for trend charts")
+    public ResponseEntity<ApiResponse<List<ProfitSummaryResponse>>> lastMonthsSummary(
+            @RequestParam(defaultValue = "6") int months) {
+        int safeMonths = Math.max(1, Math.min(months, 24));
+        return ResponseEntity.ok(ApiResponse.success(profitService.getLastNMonthsSummary(safeMonths)));
     }
 
     @GetMapping("/summary/download")

@@ -16,4 +16,5 @@ public interface MonthlyProfitService {
     ProfitSummaryResponse getMonthlyProfit(int year, int month);
     ProfitSummaryResponse getYearlyProfit(int year);
     byte[] generateProfitPdf(ProfitSummaryResponse summary);
+    List<ProfitSummaryResponse> getLastNMonthsSummary(int months);
 }
