@@ -94,10 +94,7 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
 
-        long todayInvoices = invoiceRepository.findByCreatedByOrderByCreatedAtDesc(currentUser)
-                .stream()
-                .filter(i -> i.getInvoiceDate().isAfter(todayStart))
-                .count();
+        long todayInvoices = invoiceRepository.countByCreatedByAndDateRange(currentUser, todayStart, now);
 
         return DashboardResponse.builder()
                 .todayInvoiceCount(todayInvoices)

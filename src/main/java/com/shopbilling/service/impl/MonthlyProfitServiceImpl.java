@@ -28,6 +28,9 @@ import com.shopbilling.exception.BusinessException;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -81,6 +84,7 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
         return profitMapper.toResponseList(profitRepository.findAll());
     }
 
+    // ── Auto-calculated summaries (from invoices, net of returns) ──
     @Override
     @Transactional(readOnly = true)
     public ProfitSummaryResponse getDailyProfit(LocalDate date) {
@@ -104,6 +108,34 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
         return buildSummary(start, end, String.valueOf(year));
     }
 
+    // Returns the last N months of summaries, oldest first, for dashboard charts.
+    // Uses the 3-letter abbreviated month name (Jan, Feb...) as the period label
+    // so it fits neatly on a chart X-axis.
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfitSummaryResponse> getLastNMonthsSummary(int months) {
+        List<ProfitSummaryResponse> result = new ArrayList<>();
+        LocalDate now = LocalDate.now();
+        // oldest first — e.g. for months=6: [Jan, Feb, Mar, Apr, May, Jun]
+        for (int i = months - 1; i >= 0; i--) {
+            LocalDate target = now.minusMonths(i);
+            LocalDate start = target.withDayOfMonth(1);
+            LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+            // Short month label for chart X-axis
+            String label = target.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+            ProfitSummaryResponse summary = buildSummary(start, end, label);
+            result.add(summary);
+        }
+        return result;
+    }
+
+
+    // Guard against null from aggregation queries (empty date range → null from COALESCE-less JPQL)
+    private BigDecimal nz(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    // ── PDF generation ──────────────────────────────────────────
     @Override
     @Transactional(readOnly = true)
     public byte[] generateProfitPdf(ProfitSummaryResponse summary) {
@@ -117,7 +149,6 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
 
             Font titleFont  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
             Font h2Font     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, new Color(30, 80, 160));
-            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
             Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Color.BLACK);
             Font boldFont   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.BLACK);
             Font smallFont  = FontFactory.getFont(FontFactory.HELVETICA, 8,  Color.DARK_GRAY);
@@ -161,20 +192,20 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
             table.setWidths(new float[]{3, 2});
 
             addRow(table, "Total Invoices", String.valueOf(summary.getInvoiceCount()), normalFont, normalFont);
-            addRow(table, "Total Sales (Revenue)", "₹" + summary.getTotalSales(), normalFont, normalFont);
-            addRow(table, "Production Cost", "₹" + summary.getProductionCost(), normalFont, normalFont);
+            addRow(table, "Total Sales (Revenue)", "Rs. " + summary.getTotalSales(), normalFont, normalFont);
+            addRow(table, "Production Cost", "Rs. " + summary.getProductionCost(), normalFont, normalFont);
 
             // Net profit row — highlighted
-            PdfPCell label = new PdfPCell(new Phrase("Net Profit", boldFont));
-            label.setPadding(8);
-            label.setBackgroundColor(new Color(230, 245, 233));
-            PdfPCell value = new PdfPCell(new Phrase("₹" + summary.getNetProfit(), boldFont));
-            value.setPadding(8);
-            value.setBackgroundColor(new Color(230, 245, 233));
-            table.addCell(label);
-            table.addCell(value);
+            PdfPCell labelCell = new PdfPCell(new Phrase("Net Profit", boldFont));
+            labelCell.setPadding(8);
+            labelCell.setBackgroundColor(new Color(230, 245, 233));
+            PdfPCell valueCell = new PdfPCell(new Phrase("Rs. " + summary.getNetProfit(), boldFont));
+            valueCell.setPadding(8);
+            valueCell.setBackgroundColor(new Color(230, 245, 233));
+            table.addCell(labelCell);
+            table.addCell(valueCell);
 
-            addRow(table, "Profit Margin", summary.getMarginPercent().setScale(2, RoundingMode.HALF_UP) + " %", normalFont, normalFont);
+            addRow(table, "Profit Margin", summary.getMarginPercent() + " %", normalFont, normalFont);
 
             doc.add(table);
             doc.add(new Paragraph(" "));
@@ -203,40 +234,15 @@ public class MonthlyProfitServiceImpl implements MonthlyProfitService {
         table.addCell(c2);
     }
 
-//    private ProfitSummaryResponse buildSummary(LocalDate start, LocalDate end, String label) {
-//        LocalDateTime s = start.atStartOfDay();
-//        LocalDateTime e = end.atTime(23, 59, 59);
-//
-//        BigDecimal totalSales = invoiceRepository.sumGrandTotalByDateRange(s, e);
-//        BigDecimal productionCost = invoiceItemRepository.sumProductionCostByDateRange(s, e);
-//        long invoiceCount = invoiceRepository.countByDateRange(s, e);
-//
-//        BigDecimal netProfit = totalSales.subtract(productionCost);
-//        BigDecimal margin = totalSales.compareTo(BigDecimal.ZERO) > 0
-//                ? netProfit.divide(totalSales, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
-//                : BigDecimal.ZERO;
-//
-//        return ProfitSummaryResponse.builder()
-//                .periodLabel(label)
-//                .startDate(start)
-//                .endDate(end)
-//                .totalSales(totalSales)
-//                .productionCost(productionCost)
-//                .netProfit(netProfit)
-//                .marginPercent(margin)
-//                .invoiceCount(invoiceCount)
-//                .build();
-//    }
-
     private ProfitSummaryResponse buildSummary(LocalDate start, LocalDate end, String label) {
         LocalDateTime s = start.atStartOfDay();
         LocalDateTime e = end.atTime(23, 59, 59);
 
-        BigDecimal totalSales = invoiceRepository.sumGrandTotalByDateRange(s, e);
-        BigDecimal totalReturns = itemReturnRepository.sumRefundsByDateRange(s, e);
+        BigDecimal totalSales = nz(invoiceRepository.sumGrandTotalByDateRange(s, e));
+        BigDecimal totalReturns = nz(itemReturnRepository.sumRefundsByDateRange(s, e));
         BigDecimal netSales = totalSales.subtract(totalReturns);
 
-        BigDecimal productionCost = invoiceItemRepository.sumProductionCostByDateRange(s, e);
+        BigDecimal productionCost = nz(invoiceItemRepository.sumProductionCostByDateRange(s, e));
         long invoiceCount = invoiceRepository.countByDateRange(s, e);
 
         BigDecimal netProfit = netSales.subtract(productionCost);
