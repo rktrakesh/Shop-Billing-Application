@@ -9,7 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +23,9 @@ public class JwtUtil {
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -40,6 +42,33 @@ public class JwtUtil {
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
+    }
+
+    /**
+     * A longer-lived token used only to obtain a new access token via
+     * POST /api/auth/refresh. Carries a "type": "refresh" claim so it
+     * can't be mistaken for (or used as) a normal access token.
+     */
+    public String generateRefreshToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "refresh");
+        return buildToken(claims, userDetails, refreshExpiration);
+    }
+
+    /**
+     * True if the token is a valid, non-expired refresh token for this user
+     * (i.e. has the "type": "refresh" claim).
+     */
+    public boolean isRefreshTokenValid(String token, UserDetails userDetails) {
+        try {
+            final String username = extractUsername(token);
+            String type = extractClaim(token, claims -> claims.get("type", String.class));
+            return "refresh".equals(type)
+                    && username.equals(userDetails.getUsername())
+                    && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
