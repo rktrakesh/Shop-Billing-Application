@@ -227,7 +227,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceResponse getInvoiceById(Long id) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", id));
-        return invoiceMapper.toResponse(invoice);
+        return enrichWithCredit(invoiceMapper.toResponse(invoice));
     }
 
     // Populate hasCredit and outstandingAmount on a single InvoiceResponse.
@@ -382,6 +382,76 @@ public class InvoiceServiceImpl implements InvoiceService {
             Paragraph grand = new Paragraph("GRAND TOTAL: ₹" + invoice.getGrandTotal(), grandTotalFont);
             grand.setAlignment(Element.ALIGN_RIGHT);
             document.add(grand);
+
+            // ── Payment Details section ──────────────────────────────────
+            // Always show payment mode. If a credit exists, show paid/outstanding.
+            document.add(new Paragraph(" "));
+            document.add(new com.lowagie.text.pdf.draw.LineSeparator());
+            document.add(new Paragraph(" "));
+
+            Font paymentTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
+            Font paymentFont      = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
+            Font creditAlertFont  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, new Color(180, 60, 0));
+
+            Paragraph payTitle = new Paragraph("PAYMENT DETAILS", paymentTitleFont);
+            payTitle.setAlignment(Element.ALIGN_LEFT);
+            document.add(payTitle);
+            document.add(new Paragraph(" "));
+
+            // Payment mode line
+            String modeLbl = invoice.getPaymentMode() != null ? invoice.getPaymentMode().name() : "CASH";
+            Paragraph modeLine = new Paragraph("Payment Mode:  " + modeLbl, paymentFont);
+            modeLine.setAlignment(Element.ALIGN_LEFT);
+            document.add(modeLine);
+
+            // Check if this invoice has an associated credit record
+            customerCreditRepository.findByInvoice_Id(invoice.getId()).ifPresent(credit -> {
+                try {
+                    Paragraph totalLine = new Paragraph(
+                            "Invoice Total: ₹" + invoice.getGrandTotal(), paymentFont);
+                    totalLine.setAlignment(Element.ALIGN_LEFT);
+                    document.add(totalLine);
+
+                    Paragraph paidLine = new Paragraph(
+                            "Amount Paid:   ₹" + credit.getAmountPaid()
+                                    + "  (" + modeLbl + ")", paymentFont);
+                    paidLine.setAlignment(Element.ALIGN_LEFT);
+                    document.add(paidLine);
+
+                    if (credit.getOutstandingAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        document.add(new Paragraph(" "));
+                        Paragraph outstandingLine = new Paragraph(
+                                "OUTSTANDING CREDIT: ₹" + credit.getOutstandingAmount(),
+                                creditAlertFont);
+                        outstandingLine.setAlignment(Element.ALIGN_LEFT);
+                        document.add(outstandingLine);
+
+                        document.add(new Paragraph(" "));
+                        Font noteFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.DARK_GRAY);
+                        Paragraph note = new Paragraph(
+                                "Please clear your outstanding balance at your earliest convenience.",
+                                noteFont);
+                        note.setAlignment(Element.ALIGN_LEFT);
+                        document.add(note);
+
+                        if (settings.getMobileNumber() != null) {
+                            Paragraph contact = new Paragraph(
+                                    "Contact: " + settings.getMobileNumber(), noteFont);
+                            contact.setAlignment(Element.ALIGN_LEFT);
+                            document.add(contact);
+                        }
+                    } else {
+                        // Credit was cleared — show a "Paid in full" confirmation
+                        document.add(new Paragraph(" "));
+                        Font paidFullFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, new Color(0, 128, 0));
+                        Paragraph paidFull = new Paragraph("✓ PAID IN FULL", paidFullFont);
+                        paidFull.setAlignment(Element.ALIGN_LEFT);
+                        document.add(paidFull);
+                    }
+                } catch (Exception ex) {
+                    // non-fatal — skip credit block if anything goes wrong
+                }
+            });
 
             if (settings.getFooterMessage() != null) {
                 document.add(new Paragraph(" "));
