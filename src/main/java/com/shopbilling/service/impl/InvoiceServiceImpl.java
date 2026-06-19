@@ -45,6 +45,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceMapper invoiceMapper;
     private final AuditLogService auditLogService;
     private final SecurityUtils securityUtils;
+    private final CustomerCreditRepository customerCreditRepository;
 
     @Override
     public InvoiceResponse createInvoice(InvoiceRequest request) {
@@ -93,6 +94,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .discountAmount(discountAmount)
                 .taxAmount(taxAmount)
                 .grandTotal(grandTotal)
+                .paymentMode(request.getPaymentMode() != null ? request.getPaymentMode() : com.shopbilling.enums.PaymentMode.CASH)
                 .createdBy(currentUser)
                 .notes(request.getNotes())
                 .build();
@@ -113,11 +115,31 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
 
+        // Auto-create credit record if customer paid less than the invoice total
+        if (request.getAmountPaid() != null && request.getAmountPaid().compareTo(grandTotal) < 0) {
+            BigDecimal outstanding = grandTotal.subtract(request.getAmountPaid());
+            com.shopbilling.entity.CustomerCredit credit = com.shopbilling.entity.CustomerCredit.builder()
+                    .invoice(savedInvoice)
+                    .customer(customer)
+                    .customerName(customerName)
+                    .customerMobile(customerMobile)
+                    .totalAmount(grandTotal)
+                    .amountPaid(request.getAmountPaid())
+                    .outstandingAmount(outstanding)
+                    .status(request.getAmountPaid().compareTo(BigDecimal.ZERO) == 0
+                            ? com.shopbilling.enums.CreditStatus.PENDING
+                            : com.shopbilling.enums.CreditStatus.PARTIAL)
+                    .createdBy(currentUser)
+                    .build();
+            customerCreditRepository.save(credit);
+            log.info("Credit auto-created for invoice {} — outstanding: {}", savedInvoice.getInvoiceNumber(), outstanding);
+        }
+
         auditLogService.log(AuditAction.INVOICE_CREATED, "Invoice", savedInvoice.getId(),
                 "Invoice created: " + savedInvoice.getInvoiceNumber() + " Total: " + grandTotal);
         log.info("Invoice created: {}", savedInvoice.getInvoiceNumber());
 
-        return invoiceMapper.toResponse(savedInvoice);
+        return enrichWithCredit(invoiceMapper.toResponse(savedInvoice));
     }
 
     private InvoiceItem buildInvoiceItem(InvoiceItemRequest itemReq) {
@@ -206,6 +228,17 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", id));
         return invoiceMapper.toResponse(invoice);
+    }
+
+    // Populate hasCredit and outstandingAmount on a single InvoiceResponse.
+    // Only called for detail views (not list views) to avoid N queries.
+    private InvoiceResponse enrichWithCredit(InvoiceResponse response) {
+        customerCreditRepository.findByInvoice_Id(response.getId()).ifPresent(credit -> {
+            response.setHasCredit(credit.getStatus() != com.shopbilling.enums.CreditStatus.CLEARED);
+            response.setOutstandingAmount(credit.getOutstandingAmount());
+        });
+        if (response.getHasCredit() == null) response.setHasCredit(false);
+        return response;
     }
 
     @Override
