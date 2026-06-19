@@ -12,13 +12,15 @@ import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface InvoiceMapper {
-    
+
     @Mapping(target = "customerId", source = "customer.id")
     @Mapping(target = "createdByUsername", source = "createdBy.username")
+    @Mapping(target = "hasCredit", ignore = true)
+    @Mapping(target = "outstandingAmount", ignore = true)
     InvoiceResponse toResponse(Invoice invoice);
-    
+
     List<InvoiceResponse> toResponseList(List<Invoice> invoices);
-    
+
     @Mapping(target = "productVariantId", source = "productVariant.id")
     InvoiceItemResponse toItemResponse(InvoiceItem item);
 }

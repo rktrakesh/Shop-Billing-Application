@@ -22,6 +22,8 @@ public class DashboardResponse {
     private Long lowStockCount;
     private Long todayInvoiceCount;
     private Long monthlyInvoiceCount;
+    private Long pendingCreditCount;
+    private BigDecimal totalOutstandingCredit;
     private List<InvoiceResponse> recentInvoices;
     private List<ProductVariantResponse> lowStockProducts;
 }

@@ -1,8 +1,11 @@
 package com.shopbilling.entity;
 
+import com.shopbilling.enums.PaymentMode;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -50,6 +53,12 @@ public class Invoice extends BaseEntity {
 
     @Column(name = "grand_total", nullable = false, precision = 10, scale = 2)
     private BigDecimal grandTotal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_mode", nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Builder.Default
+    private PaymentMode paymentMode = PaymentMode.CASH;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)

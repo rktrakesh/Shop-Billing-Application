@@ -30,6 +30,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final InvoiceMapper invoiceMapper;
     private final ProductVariantMapper variantMapper;
     private final SecurityUtils securityUtils;
+    private final CustomerCreditRepository customerCreditRepository;
 
     @Override
     public DashboardResponse getAdminDashboard() {
@@ -62,6 +63,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .lowStockCount(variantRepository.countLowStockVariants())
                 .todayInvoiceCount(invoiceRepository.countByDateRange(todayStart, now))
                 .monthlyInvoiceCount(invoiceRepository.countByDateRange(monthStart, now))
+                .pendingCreditCount(customerCreditRepository.countByStatusIn(
+                        java.util.Arrays.asList(com.shopbilling.enums.CreditStatus.PENDING, com.shopbilling.enums.CreditStatus.PARTIAL)))
+                .totalOutstandingCredit(customerCreditRepository.sumTotalOutstanding())
                 .recentInvoices(invoiceMapper.toResponseList(
                         invoiceRepository.findRecentInvoices(PageRequest.of(0, 10))))
                 .lowStockProducts(variantMapper.toResponseList(variantRepository.findLowStockVariants()))
@@ -82,7 +86,6 @@ public class DashboardServiceImpl implements DashboardService {
                 .yearlySales(yearlySales)
                 .lowStockCount(variantRepository.countLowStockVariants())
                 .monthlyInvoiceCount(invoiceRepository.countByDateRange(monthStart, now))
-                .lowStockProducts(variantMapper.toResponseList(variantRepository.findLowStockVariants()))
                 .recentInvoices(invoiceMapper.toResponseList(
                         invoiceRepository.findRecentInvoices(PageRequest.of(0, 10))))
                 .build();
@@ -94,7 +97,10 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
 
-        long todayInvoices = invoiceRepository.countByCreatedByAndDateRange(currentUser, todayStart, now);
+        long todayInvoices = invoiceRepository.findByCreatedByOrderByCreatedAtDesc(currentUser)
+                .stream()
+                .filter(i -> i.getInvoiceDate().isAfter(todayStart))
+                .count();
 
         return DashboardResponse.builder()
                 .todayInvoiceCount(todayInvoices)

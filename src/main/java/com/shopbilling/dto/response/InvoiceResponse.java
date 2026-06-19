@@ -1,5 +1,6 @@
 package com.shopbilling.dto.response;
 
+import com.shopbilling.enums.PaymentMode;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,8 +19,12 @@ public class InvoiceResponse {
     private BigDecimal discountAmount;
     private BigDecimal taxAmount;
     private BigDecimal grandTotal;
+    private PaymentMode paymentMode;
     private String createdByUsername;
     private String notes;
     private List<InvoiceItemResponse> items;
     private LocalDateTime createdAt;
+    // Credit info — populated if this invoice has an outstanding credit
+    private Boolean hasCredit;
+    private BigDecimal outstandingAmount;
 }
